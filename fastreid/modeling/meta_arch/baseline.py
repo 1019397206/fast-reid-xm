@@ -46,16 +46,14 @@ class Baseline(nn.Module):
             if targets.sum() < 0: targets.zero_()
 
             outputs = self.heads(features, targets)
-            return {
-                "outputs": outputs,
-                "targets": targets,
-            }
+            losses = self.losses(outputs, targets)
+            return losses
         else:
             outputs = self.heads(features)
             return outputs
 
     def preprocess_image(self, batched_inputs):
-        r"""
+        """
         Normalize and batch the input images.
         """
         if isinstance(batched_inputs, dict):
@@ -68,15 +66,13 @@ class Baseline(nn.Module):
         images.sub_(self.pixel_mean).div_(self.pixel_std)
         return images
 
-    def losses(self, outs):
-        r"""
+    def losses(self, outputs, gt_labels):
+        """
         Compute loss from modeling's outputs, the loss function input arguments
         must be the same as the outputs of the model forwarding.
         """
-        # fmt: off
-        outputs           = outs["outputs"]
-        gt_labels         = outs["targets"]
         # model predictions
+        # fmt: off
         pred_class_logits = outputs['pred_class_logits'].detach()
         cls_outputs       = outputs['cls_outputs']
         pred_features     = outputs['features']

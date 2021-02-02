@@ -10,8 +10,8 @@ import time
 from collections import Counter
 
 import torch
-from torch import nn
 from apex.parallel import DistributedDataParallel
+from torch import nn
 
 from fastreid.evaluation.testing import flatten_results_dict
 from fastreid.solver import optim
@@ -251,13 +251,13 @@ class LRScheduler(HookBase):
         self.trainer.storage.put_scalar("lr", lr, smoothing_hint=False)
 
         next_iter = self.trainer.iter + 1
-        if next_iter < self.trainer.warmup_iters:
+        if next_iter <= self.trainer.warmup_iters:
             self._scheduler["warmup_sched"].step()
 
     def after_epoch(self):
-        next_iter = self.trainer.iter
+        next_iter = self.trainer.iter + 1
         next_epoch = self.trainer.epoch + 1
-        if next_iter >= self.trainer.warmup_iters and next_epoch >= self.trainer.delay_epochs:
+        if next_iter > self.trainer.warmup_iters and next_epoch >= self.trainer.delay_epochs:
             self._scheduler["lr_sched"].step()
 
 
@@ -459,7 +459,6 @@ class LayerFreeze(HookBase):
         self.fc_freeze_iters = fc_freeze_iters
 
         self.is_frozen = False
-
         self.fc_frozen = False
 
     def before_step(self):

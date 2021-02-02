@@ -11,7 +11,6 @@ since they are meant to represent the "common default behavior" people need in t
 import argparse
 import logging
 import os
-import math
 import sys
 from collections import OrderedDict
 
@@ -246,13 +245,8 @@ class DefaultTrainer(TrainerBase):
             **optimizer_ckpt,
             **self.scheduler,
         )
+
         self.start_epoch = 0
-
-        # if cfg.SOLVER.SWA.ENABLED:
-        #     self.max_iter = cfg.SOLVER.MAX_ITER + cfg.SOLVER.SWA.ITER
-        # else:
-        #     self.max_iter = cfg.SOLVER.MAX_ITER
-
         self.max_epoch = cfg.SOLVER.MAX_EPOCH
         self.max_iter = self.max_epoch * self.iters_per_epoch
         self.warmup_iters = cfg.SOLVER.WARMUP_ITERS
@@ -327,6 +321,7 @@ class DefaultTrainer(TrainerBase):
             cfg.SOLVER.FREEZE_ITERS,
             cfg.SOLVER.FREEZE_FC_ITERS,
         ))
+
         # Do PreciseBN before checkpointer, because it updates the model and need to
         # be saved by checkpointer.
         # This is not always the best: if checkpointing has a different frequency,
@@ -418,18 +413,14 @@ class DefaultTrainer(TrainerBase):
         It now calls :func:`fastreid.solver.build_lr_scheduler`.
         Overwrite it if you'd like a different scheduler.
         """
-        cfg = cfg.clone()
-        cfg.defrost()
-        cfg.SOLVER.MAX_EPOCH = cfg.SOLVER.MAX_EPOCH - max(
-            math.ceil(cfg.SOLVER.WARMUP_ITERS / iters_per_epoch), cfg.SOLVER.DELAY_EPOCHS)
-        return build_lr_scheduler(cfg, optimizer)
+        return build_lr_scheduler(cfg, optimizer, iters_per_epoch)
 
     @classmethod
     def build_train_loader(cls, cfg):
         """
         Returns:
             iterable
-        It now calls :func:`fastreid.data.build_detection_train_loader`.
+        It now calls :func:`fastreid.data.build_reid_train_loader`.
         Overwrite it if you'd like a different data loader.
         """
         logger = logging.getLogger(__name__)
@@ -441,7 +432,7 @@ class DefaultTrainer(TrainerBase):
         """
         Returns:
             iterable
-        It now calls :func:`fastreid.data.build_detection_test_loader`.
+        It now calls :func:`fastreid.data.build_reid_test_loader`.
         Overwrite it if you'd like a different data loader.
         """
         return build_reid_test_loader(cfg, dataset_name)

@@ -4,6 +4,8 @@
 @contact: sherlockliao01@gmail.com
 """
 
+import math
+
 from . import lr_scheduler
 from . import optim
 
@@ -23,26 +25,22 @@ def build_optimizer(cfg, model):
         params += [{"name": key, "params": [value], "lr": lr, "weight_decay": weight_decay}]
 
     solver_opt = cfg.SOLVER.OPT
-    # fmt: off
-    if solver_opt == "SGD": opt_fns = getattr(optim, solver_opt)(params, momentum=cfg.SOLVER.MOMENTUM)
-    else:                   opt_fns = getattr(optim, solver_opt)(params)
-    # fmt: on
+    if solver_opt == "SGD":
+        opt_fns = getattr(optim, solver_opt)(
+            params,
+            momentum=cfg.SOLVER.MOMENTUM,
+            nesterov=True if cfg.SOLVER.MOMENTUM and cfg.SOLVER.NESTEROV else False
+        )
+    else:
+        opt_fns = getattr(optim, solver_opt)(params)
     return opt_fns
 
 
-def build_lr_scheduler(cfg, optimizer):
+def build_lr_scheduler(cfg, optimizer, iters_per_epoch):
+    max_epoch = cfg.SOLVER.MAX_EPOCH - max(
+        math.ceil(cfg.SOLVER.WARMUP_ITERS / iters_per_epoch), cfg.SOLVER.DELAY_EPOCHS)
+
     scheduler_dict = {}
-
-    if cfg.SOLVER.WARMUP_ITERS > 0:
-        warmup_args = {
-            "optimizer": optimizer,
-
-            # warmup options
-            "warmup_factor": cfg.SOLVER.WARMUP_FACTOR,
-            "warmup_iters": cfg.SOLVER.WARMUP_ITERS,
-            "warmup_method": cfg.SOLVER.WARMUP_METHOD,
-        }
-        scheduler_dict["warmup_sched"] = lr_scheduler.WarmupLR(**warmup_args)
 
     scheduler_args = {
         "MultiStepLR": {
@@ -54,7 +52,7 @@ def build_lr_scheduler(cfg, optimizer):
         "CosineAnnealingLR": {
             "optimizer": optimizer,
             # cosine annealing lr scheduler options
-            "T_max": cfg.SOLVER.MAX_EPOCH,
+            "T_max": max_epoch,
             "eta_min": cfg.SOLVER.ETA_MIN_LR,
         },
 
@@ -62,5 +60,16 @@ def build_lr_scheduler(cfg, optimizer):
 
     scheduler_dict["lr_sched"] = getattr(lr_scheduler, cfg.SOLVER.SCHED)(
         **scheduler_args[cfg.SOLVER.SCHED])
+
+    if cfg.SOLVER.WARMUP_ITERS > 0:
+        warmup_args = {
+            "optimizer": optimizer,
+
+            # warmup options
+            "warmup_factor": cfg.SOLVER.WARMUP_FACTOR,
+            "warmup_iters": cfg.SOLVER.WARMUP_ITERS,
+            "warmup_method": cfg.SOLVER.WARMUP_METHOD,
+        }
+        scheduler_dict["warmup_sched"] = lr_scheduler.WarmupLR(**warmup_args)
 
     return scheduler_dict

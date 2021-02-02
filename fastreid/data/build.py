@@ -16,10 +16,25 @@ from .common import CommDataset
 from .datasets import DATASET_REGISTRY
 from .transforms import build_transforms
 
+__all__ = [
+    "build_reid_train_loader",
+    "build_reid_test_loader"
+]
+
 _root = os.getenv("FASTREID_DATASETS", "datasets")
 
 
 def build_reid_train_loader(cfg, mapper=None, **kwargs):
+    """
+    Build reid train loader
+
+    Args:
+        cfg : image file path
+        mapper : one of the supported image modes in PIL, or "BGR"
+
+    Returns:
+        torch.utils.data.DataLoader: a dataloader.
+    """
     cfg = cfg.clone()
 
     train_items = list()
@@ -59,7 +74,20 @@ def build_reid_train_loader(cfg, mapper=None, **kwargs):
     return train_loader
 
 
-def build_reid_test_loader(cfg, dataset_name, **kwargs):
+def build_reid_test_loader(cfg, dataset_name, mapper=None, **kwargs):
+    """
+    Build reid test loader
+
+    Args:
+        cfg:
+        dataset_name:
+        mapper:
+        **kwargs:
+
+    Returns:
+
+    """
+
     cfg = cfg.clone()
 
     dataset = DATASET_REGISTRY.get(dataset_name)(root=_root, **kwargs)
@@ -67,8 +95,12 @@ def build_reid_test_loader(cfg, dataset_name, **kwargs):
         dataset.show_test()
     test_items = dataset.query + dataset.gallery
 
-    test_transforms = build_transforms(cfg, is_train=False)
-    test_set = CommDataset(test_items, test_transforms, relabel=False)
+    if mapper is not None:
+        transforms = mapper
+    else:
+        transforms = build_transforms(cfg, is_train=False)
+
+    test_set = CommDataset(test_items, transforms, relabel=False)
 
     mini_batch_size = cfg.TEST.IMS_PER_BATCH // comm.get_world_size()
     data_sampler = samplers.InferenceSampler(len(test_set))

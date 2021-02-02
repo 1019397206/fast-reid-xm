@@ -8,15 +8,14 @@ from typing import List
 
 import torch
 from torch.optim.lr_scheduler import *
-from torch.optim.lr_scheduler import _LRScheduler
 
 
-class WarmupLR(_LRScheduler):
+class WarmupLR(torch.optim.lr_scheduler._LRScheduler):
     def __init__(
             self,
             optimizer: torch.optim.Optimizer,
             warmup_factor: float = 0.1,
-            warmup_iters: int = 10,
+            warmup_iters: int = 1000,
             warmup_method: str = "linear",
             last_epoch: int = -1,
     ):
@@ -26,7 +25,7 @@ class WarmupLR(_LRScheduler):
         super().__init__(optimizer, last_epoch)
 
     def get_lr(self) -> List[float]:
-        warmup_factor = _get_warmup_factor_at_iter(
+        warmup_factor = _get_warmup_factor_at_epoch(
             self.warmup_method, self.last_epoch, self.warmup_iters, self.warmup_factor
         )
         return [
@@ -38,7 +37,7 @@ class WarmupLR(_LRScheduler):
         return self.get_lr()
 
 
-def _get_warmup_factor_at_iter(
+def _get_warmup_factor_at_epoch(
         method: str, iter: int, warmup_iters: int, warmup_factor: float
 ) -> float:
     """
@@ -46,8 +45,8 @@ def _get_warmup_factor_at_iter(
     See https://arxiv.org/abs/1706.02677 for more details.
     Args:
         method (str): warmup method; either "constant" or "linear".
-        iter (int): iteration at which to calculate the warmup factor.
-        warmup_iters (int): the number of warmup iterations.
+        iter (int): iter at which to calculate the warmup factor.
+        warmup_iters (int): the number of warmup epochs.
         warmup_factor (float): the base warmup factor (the meaning changes according
             to the method used).
     Returns:
@@ -59,8 +58,8 @@ def _get_warmup_factor_at_iter(
     if method == "constant":
         return warmup_factor
     elif method == "linear":
-        alpha = (1 - iter / warmup_iters) * (1 - warmup_factor)
-        return 1 - alpha
+        alpha = iter / warmup_iters
+        return warmup_factor * (1 - alpha) + alpha
     elif method == "exp":
         return warmup_factor ** (1 - iter / warmup_iters)
     else:
