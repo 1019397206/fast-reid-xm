@@ -7,7 +7,7 @@ design.pptx
 logs
 logs/
 
-# compilation and distribution
+# compilation and distribution
 __pycache__
 _ext
 *.pyc
@@ -19,24 +19,24 @@ build/
 dist/
 wheels/
 
-# pytorch/python/numpy formats
+# pytorch/python/numpy formats
 *.pth
 *.pkl
 *.npy
 *.ts
 model_ts*.txt
 
-# ipython/jupyter notebooks
+# ipython/jupyter notebooks
 *.ipynb
 **/.ipynb_checkpoints/
 
-# Editor temporaries
+# Editor temporaries
 *.swn
 *.swo
 *.swp
 *~
 
-# editor settings
+# editor settings
 .idea
 .vscode
 _darcs
